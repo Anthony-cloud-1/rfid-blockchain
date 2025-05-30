@@ -1,22 +1,24 @@
-# RFID-Driven Inventory Tracking with Blockchain Documentation
+# RFID-Driven Inventory Tracking with Blockchain
 
 ## Project Overview
 
-This project implements a blockchain-based inventory tracking system using RFID (NFC) tags to manage products across three phases: **Enrollment**, **Logistics**, and **Retail**. It leverages Optimism Sepolia (a layer-2 Ethereum testnet) for cost-effective transactions, a Solidity smart contract for data storage, a Node.js server for processing NFC scans, and NTAG215 NFC tags for product identification. The system ensures secure, transparent tracking of products (e.g., pharmaceuticals, goods) in a supply chain.
+This project implements a blockchain-based inventory tracking system using RFID (NFC) tags to manage products across three phases: **Enrollment**, **Logistics**, and **Retail**. It leverages Optimism Sepolia (a layer-2 Ethereum testnet) for cost-effective transactions, a Solidity smart contract for data storage, a Node.js server for processing NFC scans, a React frontend for user interaction, and NTAG215 NFC tags for product identification. The system ensures secure, transparent tracking of products (e.g., pharmaceuticals, goods) in a supply chain.
 
 ### Key Components
-- **MetaMask**: Browser extension for managing Ethereum accounts and signing transactions.
-- **Optimism Sepolia**: Layer-2 testnet for deploying and interacting with the smart contract.
-- **Alchemy**: Blockchain API provider for connecting to Optimism Sepolia.
-- **Solidity Smart Contract**: Manages product data (registration, location updates, sales).
-- **Node.js Server**: Handles NFC scan requests and interacts with the smart contract.
-- **NTAG215 NFC Tags**: Store URLs to trigger server actions via NFC Tools.
-- **NFC Tools**: Mobile app for writing and reading NFC tags.
+- **MetaMask**: Manages Ethereum accounts and signs transactions.
+- **Optimism Sepolia**: Layer-2 testnet for contract deployment and interaction.
+- **Alchemy**: Provides blockchain API connectivity to Optimism Sepolia.
+- **Solidity Smart Contract**: Stores and manages product data (`Inventory.sol`).
+- **Node.js Server**: Processes NFC scan requests and API calls (`server.js`).
+- **React Frontend**: User interface for managing products and viewing status.
+- **NTAG215 NFC Tags**: Store URLs to trigger server actions.
+- **NFC Tools**: Mobile app for writing/reading NFC tags.
 
 ### Phases
-1. **Enrollment**: Register a product with details (Product ID, Batch Number, Expiry Date, Origin).
-2. **Logistics**: Update a product’s location (e.g., "Warehouse", "Transit").
-3. **Retail**: Log a sale with a date, marking the product as sold.
+1. **Enrollment**: Register a product with details (Product ID, Name, Batch Number, Expiry Date, Origin, etc.).
+2. **Logistics**: Update a product’s location and status (e.g., "en route", "arrived").
+3. **Retail**: Log a sale with a date and price, marking the product as sold.
+4. **Verification**: Check a product’s status and details.
 
 ---
 
@@ -26,7 +28,7 @@ This project implements a blockchain-based inventory tracking system using RFID 
 
 MetaMask is used to manage your Ethereum account and sign transactions on Optimism Sepolia.
 
-#### Steps
+### Steps
 1. **Install MetaMask**:
    - Download the MetaMask browser extension for Chrome, Firefox, or Edge from [metamask.io](https://metamask.io).
    - Install and create a new wallet or import an existing one.
@@ -72,7 +74,7 @@ Alchemy provides an API to connect to Optimism Sepolia for deploying and interac
 2. **Create an App**:
    - In the Alchemy dashboard, click "Create New App".
    - Set:
-     - **Name**: RFID Inventory
+     - **Name**: RFID Inventory (You can name it as you wish)
      - **Chain**: Optimism
      - **Network**: Sepolia
    - Save and note the API key.
@@ -88,84 +90,23 @@ Alchemy provides an API to connect to Optimism Sepolia for deploying and interac
 
 The smart contract (`Inventory.sol`) manages product data on Optimism Sepolia, using `bytes32` keys generated via `keccak256` for security.
 
-#### Contract Code
-
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract Inventory {
-    struct Product {
-        string productId;
-        string batchNo;
-        string expiryDate;
-        string origin;
-        bool exists;
-        string location;
-        bool sold;
-        string saleDate;
-    }
-
-    mapping(bytes32 => Product) public products;
-
-    event ProductRegistered(string productId, string batchNo, string expiryDate, string origin);
-    event LocationUpdated(string productId, string newLocation);
-    event SaleLogged(string productId, string saleDate);
-
-    function getProductKey(string memory productId) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(productId));
-    }
-
-    function registerProduct(
-        string memory productId,
-        string memory batchNo,
-        string memory expiryDate,
-        string memory origin
-    ) public {
-        bytes32 key = getProductKey(productId);
-        require(!products[key].exists, "Product already registered");
-        products[key] = Product(productId, batchNo, expiryDate, origin, true, "", false, "");
-        emit ProductRegistered(productId, batchNo, expiryDate, origin);
-    }
-
-    function updateLocation(string memory productId, string memory newLocation) public {
-        bytes32 key = getProductKey(productId);
-        require(products[key].exists, "Product not found");
-        products[key].location = newLocation;
-        emit LocationUpdated(productId, newLocation);
-    }
-
-    function logSale(string memory productId, string memory saleDate) public {
-        bytes32 key = getProductKey(productId);
-        require(products[key].exists, "Product not found");
-        require(!products[key].sold, "Product already sold");
-        products[key].sold = true;
-        products[key].saleDate = saleDate;
-        emit SaleLogged(productId, saleDate);
-    }
-
-    function getProduct(string memory productId)
-        public
-        view
-        returns (
-            string memory,
-            string memory,
-            string memory,
-            string memory,
-            string memory,
-            bool,
-            string memory
-        )
-    {
-        bytes32 key = getProductKey(productId);
-        require(products[key].exists, "Product not found");
-        Product memory p = products[key];
-        return (p.productId, p.batchNo, p.expiryDate, p.origin, p.location, p.sold, p.saleDate);
-    }
-}
-```
-
-
+- **File**: `Inventory.sol`.
+- **Snippet**:
+  ```solidity
+  function registerProduct(
+      string memory id, string memory name, string memory sku, string memory batchNo,
+      string memory expiryDate, string memory origin, string memory location, string memory uid,
+      string memory category, uint256 quantityInStock, Status status, string memory icon
+  ) public {
+      bytes32 key = keccak256(abi.encodePacked(id));
+      require(!products[key].exists, "Product already registered");
+      products[key] = Product(id, name, sku, batchNo, expiryDate, origin, location, false, "",
+                             uid, 0, category, quantityInStock, status, icon, true);
+      productIds.push(id);
+      emit ProductRegistered(id, name, sku, batchNo, expiryDate, origin, location, uid,
+                             category, quantityInStock, status, icon);
+  }
+  ```
 #### Deployment Steps
 1. **Open Remix IDE**:
    - Go to [remix.ethereum.org](https://remix.ethereum.org).
@@ -202,6 +143,38 @@ contract Inventory {
 
 The Node.js server processes NFC scan requests, interacts with the smart contract, and handles enrollment, logistics, and retail actions.
 
+- **File**: `server.js`.
+- **Snippet**:
+  ```javascript
+  app.post('/deleteProduct', async (req, res) => {
+      const { id } = req.body;
+      if (!id) {
+          return res.status(400).json({ success: false, error: 'Missing productId' });
+      }
+      try {
+          const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
+          const gas = await contract.methods.deleteProduct(id).estimateGas({ from: account.address });
+          const data = contract.methods.deleteProduct(id).encodeABI();
+          const tx = {
+              from: account.address,
+              to: contractAddress,
+              gas: Math.min(Math.floor(gas * 1.2), 500000),
+              gasPrice: await web3.eth.getGasPrice(),
+              data,
+              nonce
+          };
+          const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
+          const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+          productCache.delete(id);
+          productCache.delete('products');
+          res.status(200).json({ success: true, transactionHash: receipt.transactionHash });
+      } catch (error) {
+          console.error('Error deleting product:', error.message);
+          res.status(500).json({ success: false, error: error.message });
+      }
+  });
+  ```
+
 #### Prerequisites
 - **Node.js**: Install from [nodejs.org](https://nodejs.org) (version 16+ recommended).
 - **Text Editor**: Use VS Code or any editor.
@@ -220,254 +193,6 @@ The Node.js server processes NFC scan requests, interacts with the smart contrac
    ```bash
    npm install express web3 dotenv
    ```
-
-#### Server Code
-```javascript
-require('dotenv').config();
-const express = require('express');
-const Web3 = require('web3');
-const app = express();
-const port = 3000;
-
-// Connect to Optimism Sepolia via Alchemy
-const web3 = new Web3(process.env.ALCHEMY_URL);
-
-// Contract details
-const contractAddress = '0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxC524'; // Replace with your contract address
-const contractABI = [
-  {
-    "anonymous": false,
-    "inputs": [
-      {"indexed": false, "internalType": "string", "name": "productId", "type": "string"},
-      {"indexed": false, "internalType": "string", "name": "batchNo", "type": "string"},
-      {"indexed": false, "internalType": "string", "name": "expiryDate", "type": "string"},
-      {"indexed": false, "internalType": "string", "name": "origin", "type": "string"}
-    ],
-    "name": "ProductRegistered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {"indexed": false, "internalType": "string", "name": "productId", "type": "string"},
-      {"indexed": false, "internalType": "string", "name": "newLocation", "type": "string"}
-    ],
-    "name": "LocationUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {"indexed": false, "internalType": "string", "name": "productId", "type": "string"},
-      {"indexed": false, "internalType": "string", "name": "saleDate", "type": "string"}
-    ],
-    "name": "SaleLogged",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {"internalType": "string", "name": "productId", "type": "string"},
-      {"internalType": "string", "name": "batchNo", "type": "string"},
-      {"internalType": "string", "name": "expiryDate", "type": "string"},
-      {"internalType": "string", "name": "origin", "type": "string"}
-    ],
-    "name": "registerProduct",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"internalType": "string", "name": "productId", "type": "string"},
-      {"internalType": "string", "name": "newLocation", "type": "string"}
-    ],
-    "name": "updateLocation",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"internalType": "string", "name": "productId", "type": "string"},
-      {"internalType": "string", "name": "saleDate", "type": "string"}
-    ],
-    "name": "logSale",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "string", "name": "productId", "type": "string"}],
-    "name": "getProduct",
-    "outputs": [
-      {"internalType": "string", "name": "", "type": "string"},
-      {"internalType": "string", "name": "", "type": "string"},
-      {"internalType": "string", "name": "", "type": "string"},
-      {"internalType": "string", "name": "", "type": "string"},
-      {"internalType": "string", "name": "", "type": "string"},
-      {"internalType": "bool", "name": "", "type": "bool"},
-      {"internalType": "string", "name": "", "type": "string"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "string", "name": "productId", "type": "string"}],
-    "name": "getProductKey",
-    "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
-    "name": "products",
-    "outputs": [
-      {"internalType": "string", "name": "productId", "type": "string"},
-      {"internalType": "string", "name": "batchNo", "type": "string"},
-      {"internalType": "string", "name": "expiryDate", "type": "string"},
-      {"internalType": "string", "name": "origin", "type": "string"},
-      {"internalType": "bool", "name": "exists", "type": "bool"},
-      {"internalType": "string", "name": "location", "type": "string"},
-      {"internalType": "bool", "name": "sold", "type": "bool"},
-      {"internalType": "string", "name": "saleDate", "type": "string"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
-const contract = new web3.eth.Contract(contractABI, contractAddress);
-
-// Private key
-const privateKey = process.env.PRIVATE_KEY;
-if (!privateKey) {
-  console.error('Error: PRIVATE_KEY not set in .env');
-  process.exit(1);
-}
-
-// Create account
-let account;
-try {
-  account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
-  console.log('Account Address:', account.address);
-} catch (error) {
-  console.error('Failed to create account from private key:', error.message);
-  process.exit(1);
-}
-
-// Check account balance
-async function checkBalance() {
-  try {
-    const balance = await web3.eth.getBalance(account.address);
-    console.log('Account Balance:', web3.utils.fromWei(balance, 'ether'), 'ETH');
-    if (balance === '0') {
-      console.warn('Warning: Account has 0 ETH. Claim test ETH from Superchain Faucet.');
-    }
-  } catch (error) {
-    console.error('Error checking balance:', error.message);
-  }
-}
-checkBalance();
-
-// Handle NFC Tools GET request - Register Product
-app.get('/register', async (req, res) => {
-  const tagId = req.query.tagid;
-  const text = req.query.text;
-  if (!text) {
-    return res.status(400).send('No text data found');
-  }
-  const parts = text.split('|');
-  if (parts.length !== 4) {
-    return res.status(400).send('Invalid text format; expected PID|Batch|Expiry|Origin');
-  }
-  const [productId, batchNo, expiryDate, origin] = parts;
-  console.log('Register Parsed Input:', { productId, batchNo, expiryDate, origin });
-  try {
-    const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
-    const gas = await contract.methods.registerProduct(productId, batchNo, expiryDate, origin)
-      .estimateGas({ from: account.address });
-    const data = contract.methods.registerProduct(productId, batchNo, expiryDate, origin).encodeABI();
-    const tx = {
-      from: account.address,
-      to: contractAddress,
-      gas: Math.min(Math.floor(gas * 1.2), 500000),
-      gasPrice: web3.utils.toWei('0.1', 'gwei'),
-      data: data,
-      nonce: nonce
-    };
-    const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-    res.send(`Product ${productId} registered on blockchain. Tx: ${receipt.transactionHash}`);
-  } catch (error) {
-    console.error('Error registering product:', error);
-    res.status(500).send(`Error registering product: ${error.message}`);
-  }
-});
-
-// Handle Update Location
-app.get('/updateLocation', async (req, res) => {
-  const productId = req.query.productId;
-  const newLocation = req.query.location;
-  if (!productId || !newLocation) {
-    return res.status(400).send('Missing productId or location');
-  }
-  console.log('Update Location Input:', { productId, newLocation });
-  try {
-    const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
-    const gas = await contract.methods.updateLocation(productId, newLocation)
-      .estimateGas({ from: account.address });
-    const data = contract.methods.updateLocation(productId, newLocation).encodeABI();
-    const tx = {
-      from: account.address,
-      to: contractAddress,
-      gas: Math.min(Math.floor(gas * 1.2), 500000),
-      gasPrice: web3.utils.toWei('0.1', 'gwei'),
-      data: data,
-      nonce: nonce
-    };
-    const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-    res.send(`Location updated for ${productId}. Tx: ${receipt.transactionHash}`);
-  } catch (error) {
-    console.error('Error updating location:', error);
-    res.status(500).send(`Error updating location: ${error.message}`);
-  }
-});
-
-// Handle Log Sale
-app.get('/logSale', async (req, res) => {
-  const productId = req.query.productId;
-  const saleDate = req.query.saleDate;
-  if (!productId || !saleDate) {
-    return res.status(400).send('Missing productId or saleDate');
-  }
-  console.log('Log Sale Input:', { productId, saleDate });
-  try {
-    const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
-    const gas = await contract.methods.logSale(productId, saleDate)
-      .estimateGas({ from: account.address });
-    const data = contract.methods.logSale(productId, saleDate).encodeABI();
-    const tx = {
-      from: account.address,
-      to: contractAddress,
-      gas: Math.min(Math.floor(gas * 1.2), 500000),
-      gasPrice: web3.utils.toWei('0.1', 'gwei'),
-      data: data,
-      nonce: nonce
-    };
-    const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-    res.send(`Sale logged for ${productId}. Tx: ${receipt.transactionHash}`);
-  } catch (error) {
-    console.error('Error logging sale:', error);
-    res.status(500).send(`Error logging sale: ${error.message}`);
-  }
-});
-
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
-
-```
 
 #### Configure Environment
 1. Create a `.env` file in the project directory:
@@ -491,19 +216,104 @@ ALCHEMY_URL=alchemy_api_url
    ```
 2. Expected output:
    ```
-   Account Address: 0xBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx6b79
+   Account Address: 0xBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxb79
+   Server running at http://localhost:3001
+   Contract Owner: 0xBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxb79
    Account Balance: X ETH
-   Server running at http://localhost:3000
    ```
 3. Test endpoints:
-   - **Register**: `http://localhost:3000/register?text=PID003|Batch003|Exp2027|Kenya`
-   - **Update Location**: `http://localhost:3000/updateLocation?productId=PID003&location=Accra`
-   - **Log Sale**: `http://localhost:3000/logSale?productId=PID003&saleDate=2025-05-24`
+   - **Register**: `http://localhost:3000/register?tagid=TAG001&text=PID003|Batch003|Exp2027|Kenya`
+   - **Update Location**: `http://localhost:3000/updateLocation?tagid=TAG001&text=PID003|Accra|1000|arrived`
+   - **Log Sale**: `http://localhost:3000/logSale?tagid=TAG001&text=PID003|2025-05-24|1500`
+   -**Check Product**: `http://localhost:3000/checkProduct?tagid=TAG001&text=PID003`
 
 ---
 
-### 5. Configure NFC Tools and Ngrok
+### 5. Set Up the React Frontend
+- **Folder**: `frontend/`.
+- **Snippet** (`app/page.tsx`):
+  ```tsx
+  "use client";
 
+  import { useEffect, useState } from "react";
+  import { useSearchParams } from "next/navigation";
+  import AppHeader from "./AppHeader/AppHeader";
+  import { Card } from "@/components/ui/card";
+  import { Button } from "@/components/ui/button";
+  import AppTable from "./AppTable/AppTable";
+  import { useTheme } from "next-themes";
+  import { DeleteDialog } from "./DeleteDialog";
+  import { useProductStore } from "./useProductStore";
+  import { useForm, Controller } from "react-hook-form";
+  import { zodResolver } from "@hookform/resolvers/zod";
+  import { z } from "zod";
+  import { Toaster } from "@/components/ui/toaster";
+  import { useToast } from "@/hooks/use-toast";
+  import { nanoid } from "nanoid";
+
+  const updateLocationSchema = z.object({
+    location: z.string().min(1, "Location is required"),
+    price: z.number().nonnegative("Price cannot be negative"),
+    status: z.enum(["en route", "arrived", "sold"]),
+  });
+
+  const logSaleSchema = z.object({
+    saleDate: z.string().min(1, "Sale Date is required"),
+    price: z.number().nonnegative("Price cannot be negative"),
+  });
+
+  export default function Home() {
+    const { theme } = useTheme();
+    const [isClient, setIsClient] = useState(false);
+    const bgColor = theme === "dark" ? "bg-black" : "bg-gray-50";
+    const searchParams = useSearchParams();
+    const { loadProducts } = useProductStore();
+    const { toast } = useToast();
+
+    const uid = searchParams.get("uid") || `UID-${nanoid(6)}`;
+    const productId = searchParams.get("productId") || "";
+    const nfcText = searchParams.get("text") || "";
+
+    const updateLocationForm = useForm({
+      resolver: zodResolver(updateLocationSchema),
+      defaultValues: { location: "", price: 0, status: "en route" },
+    });
+
+    const logSaleForm = useForm({
+      resolver: zodResolver(logSaleSchema),
+      defaultValues: { saleDate: "", price: 0 },
+    });
+  ```
+  
+- **Prerequisites**:
+  - Node.js (16+).
+  - A modern browser.
+- **Setup Steps**:
+  1. Navigate to the frontend folder:
+     ```bash
+     cd frontend
+     ```
+  2. Install dependencies:
+     ```bash
+     npm install
+     ```
+  3. Start the development server:
+     ```bash
+     npm run dev
+     ```
+     - Opens at `http://localhost:3000`.
+  4. Ensure the backend server (`server.js`) is running at `http://localhost:3001`.
+
+- **Dependencies**:
+  - React (`react`, `react-dom`).
+  - Axios for API calls (`axios`).
+  - Tailwind CSS for styling.
+- **Structure**:
+  - `app/page.tsx`: Main component with UI for displaying products.
+- **Configuration**:
+  - Update API endpoints in `page.tsx` if the backend URL changes (e.g., to an ngrok URL).
+
+### 6. Configure NFC Tools and Ngrok
 NFC Tools writes URLs to NTAG215 tags, which trigger server actions when scanned. Ngrok exposes the local server to the internet for mobile access.
 
 #### Install NFC Tools
@@ -521,15 +331,16 @@ NFC Tools writes URLs to NTAG215 tags, which trigger server actions when scanned
    ```bash
    ngrok http 3000
    ```
-3. Copy the public URL (e.g., `https://fedc-41-215-173-30.ngrok-free.app`).
+3. Copy the public URL (e.g., `https://5664-41-215-171-145.ngrok-free.app`).
 
 #### Write NFC Tags
 1. Open NFC Tools.
 2. Select **Write** > **Add a record** > **Custom URL/URI**.
 3. Enter a URL for the desired action, e.g.:
-   - **Enrollment**: `https://fedc-41-215-173-30.ngrok-free.app/register?text=PID003|Batch003|Exp2027|Kenya`
-   - **Logistics**: `https://fedc-41-215-173-30.ngrok-free.app/updateLocation?productId=PID003&location=Accra`
-   - **Retail**: `https://fedc-41-215-173-30.ngrok-free.app/logSale?productId=PID003&saleDate=2025-05-24`
+   - **Enrollment**: `https://5664-41-215-171-145.ngrok-free.app/register?tagid=TAG001&text=PID003|Batch003|Exp2027|Kenya`
+   - **Logistics**: `https://5664-41-215-171-145.ngrok-free.app/updateLocation?tagid=TAG001&text=PID003|Accra|1000|arrived`
+   - **Retail**: `https://5664-41-215-171-145.ngrok-free.app/logSale?tagid=TAG001&text=PID003|2025-05-24|1500`
+   -**Verification**: `https://5664-41-215-171-145.ngrok-free.app/checkProduct?tagid=TAG001&text=PID003`
 4. Write the URL to an NTAG215 tag.
 5. Scan to verify the URL opens correctly.
 
@@ -540,139 +351,104 @@ NFC Tools writes URLs to NTAG215 tags, which trigger server actions when scanned
 
 ---
 
-### 6. Use Scenarios and How to Execute
+## Use Scenarios
 
-#### Enrollment Phase
-**Scenario**: A manufacturer registers a new product (e.g., a pharmaceutical batch) with an NFC tag.
+### Enrollment
+- **Scenario**: A manufacturer registers a product (e.g., an electronics batch) via NFC.
 - **Steps**:
   1. Run `server.js` and Ngrok.
-  2. Write an NFC tag with:
+  2. Write an NFC tag:
      ```
-     https://fedc-41-215-173-30.ngrok-free.app/register?text=PID003|Batch003|Exp2027|Kenya
+     https://ngrok-url/register?tagid=TAG001&text=PID001|ProductX|Batch001|Exp2025|USA|Electronics|10
      ```
-  3. Scan the tag with NFC Tools.
-  4. The server registers the product in the smart contract.
-  5. Verify:
-     - Server logs: `Product PID003 registered on blockchain. Tx: 0x...`
-     - Remix: Call `getProduct("PID003")` → `["PID003", "Batch003", "Exp2027", "Kenya", "", false, ""]`
-     - Block Explorer: Check the transaction hash.
+  3. Scan with NFC Tools.
+  4. Verify in Remix (`getProduct("PID001")`) or frontend (check product).
 
-#### Logistics Phase
-**Scenario**: A logistics provider updates the product’s location as it moves through the supply chain.
+### Logistics
+- **Scenario**: A logistics provider updates a product’s location.
 - **Steps**:
-  1. Ensure the product is registered (e.g., `PID003`).
-  2. Write an NFC tag with:
+  1. Write an NFC tag:
      ```
-     https://fedc-41-215-173-30.ngrok-free.app/updateLocation?productId=PID003&location=Accra
+     https://ngrok-url/updateLocation?tagid=TAG001&text=PID001|Accra|1000|arrived
      ```
-  3. Scan the tag.
-  4. The server updates the location.
-  5. Verify:
-     - Server logs: `Update Location Input: { productId: 'PID003', newLocation: 'Accra' }`
-     - Remix: `getProduct("PID003")` → `["PID003", "Batch003", "Exp2027", "Kenya", "Accra", false, ""]`
+  2. Scan to update.
+  3. Verify location in frontend or Remix.
 
-#### Retail Phase
-**Scenario**: A retailer logs a sale when the product is sold to a customer.
+### Retail
+- **Scenario**: A retailer logs a sale.
 - **Steps**:
-  1. Ensure the product is registered and located (e.g., `PID003`).
-  2. Write an NFC tag with:
+  1. Write an NFC tag:
      ```
-     https://fedc-41-215-173-30.ngrok-free.app/logSale?productId=PID003&saleDate=2025-05-24
+     https://ngrok-url/logSale?tagid=TAG001&text=PID001|2025-05-24|1000
      ```
-  3. Scan the tag.
-  4. The server logs the sale.
-  5. Verify:
-     - Server logs: `Log Sale Input: { productId: 'PID003', saleDate: '2025-05-24' }`
-     - Remix: `getProduct("PID003")` → `["PID003", "Batch003", "Exp2027", "Kenya", "Accra", true, "2025-05-24"]`
+  2. Scan to log sale.
+  3. Verify sale status in frontend or Remix.
 
-#### Querying Products
-- **Check a Single Product**:
-  - In Remix, call `getProduct("PID003")` to retrieve details.
-  - Alternatively, add a server endpoint to query products (see Future Enhancements).
-- **List All Products**:
-  - The current contract doesn’t support listing all products (mappings don’t allow iteration).
-  - To enable this, modify the contract to store product IDs in an array (see Future Enhancements).
+### Verification (Check Product)
+- **Scenario**: A user verifies a product’s status (e.g., an inventory manager checking authenticity).
+- **Steps**:
+  1. Write an NFC tag:
+       ```
+       https://ngrok-url/checkProduct?tagid=TAG001&text=PID001
+       ```
+  2. Scan to view status (displays in browser).
 
 ---
 
-### 7. Troubleshooting
-
-- **MetaMask**:
-  - **No Funds**: Claim test ETH from [Superchain Faucet](https://app.optimism.io/faucet).
-  - **Wrong Network**: Ensure Optimism Sepolia is selected.
+## Troubleshooting
+- **MetaMask**: Ensure Optimism Sepolia is selected and funded.
 - **Server**:
-  - **Connection Error**: Verify `ALCHEMY_URL` in `.env`.
-  - **Transaction Fails**:
-    - Check server logs for errors (e.g., "insufficient funds", "out of gas").
-    - Increase `gas` to `600000` in `server.js`.
-    - Ensure sufficient test ETH.
-- **NFC Tools**:
-  - **URL Doesn’t Open**: Enable NFC and internet on the phone; check NFC Tools settings ("Open URL").
-  - **Invalid Format**: Ensure the URL has correct syntax and parameters.
-- **Contract**:
-  - **Empty Output**: Verify the contract address matches the deployed instance.
-  - **Reverts**: Check error messages in Remix or server logs (e.g., "Product already registered").
-
----
-
-### 8. Security Notes
-
-- **Private Key**: Store in `.env`, not in `server.js`. Never share it.
-- **Contract Security**: Uses `keccak256` for mapping keys to prevent collisions.
-- **Ngrok**: Free tier URLs change on restart; use a static domain for production.
-- **Access Control**: Current contract allows anyone to call functions. Add `onlyOwner` or role-based access for production (see Future Enhancements).
-
----
-
-### 9. Future Enhancements
-
-- **Query All Products**:
-  - Add an array to store `productId`s:
-    ```solidity
-    string[] public productIds;
-    function registerProduct(...) public {
-        ...
-        productIds.push(productId);
-    }
-    function getAllProductIds() public view returns (string[] memory) {
-        return productIds;
-    }
-    ```
-  - Add a server endpoint to list products.
-- **Access Control**:
-  - Use OpenZeppelin’s `Ownable`:
-    ```solidity
-    import "@openzeppelin/contracts/access/Ownable.sol";
-    contract Inventory is Ownable {
-        constructor() Ownable(msg.sender) {}
-        function registerProduct(...) public onlyOwner { ... }
-    }
-    ```
-- **Dynamic NFC Logic**:
-  - Use NFC Tools’ conditional blocks (e.g., scan counter, HTTP response checks) to handle phases on the tag, but this requires careful byte management (see next steps).
+  - Check `.env` for correct `PRIVATE_KEY` and `ALCHEMY_URL`.
+  - Increase `gas` in `server.js` if transactions fail.
 - **Frontend**:
-  - Build a web app to display product details, trigger actions, or visualize supply chain data.
+  - Verify backend is running (`http://localhost:3001`).
+  - Check browser console for CORS or API errors.
+- **NFC Tools**:
+  - Ensure NFC is enabled and URLs are correctly formatted.
+  - Test URLs in a browser first.
 
 ---
 
-### 10. System Architecture
+## Security Notes
+- **Private Key**: Store in `.env`, never hardcode.
+- **Contract**: Add `onlyOwner` modifier for production.
+- **Frontend**: Sanitize inputs to prevent injection.
+- **Ngrok**: Use a static domain for production stability.
 
+---
+
+## Future Enhancements
+- **Contract**: Add `productIds` array for listing all products.
+- **Frontend**: Add forms for registration, location updates, and sales logging.
+- **Access Control**: Implement role-based access in the contract.
+- **NFC Logic**: Use NFC Tools’ conditional blocks for dynamic actions.
+
+---
+
+## System Architecture
 ```
 [NTAG215 Tag] --(Scan)--> [NFC Tools] --(URL)--> [Ngrok] --(HTTP)--> [Node.js Server]
                                                                            |
                                                                            v
-                                                                    [Smart Contract]
-                                                                   (Optimism Sepolia)
-                                                                           |
-                                                                           v
-                                                                     [Alchemy API]
+[React Frontend] <----(API)----> [Smart Contract (Optimism Sepolia)] <----> [Alchemy API]
 ```
 
-- **Tag**: Stores a URL (e.g., `https://ngrok-url/register?text=PID003|...`).
-- **NFC Tools**: Reads the tag and opens the URL.
-- **Ngrok**: Forwards requests to the local server.
-- **Server**: Processes requests, signs transactions, and calls the contract.
-- **Contract**: Stores and retrieves product data.
-- **Alchemy**: Connects the server to Optimism Sepolia.
+- **Tag**: Stores URLs for actions.
+- **NFC Tools**: Triggers server requests.
+- **Ngrok**: Exposes the server.
+- **Frontend**: Displays product data and triggers actions.
+- **Server**: Interacts with the contract.
+- **Contract**: Manages product data.
 
 ---
+
+## Repository Structure
+```
+rfid-blockchain/
+├── frontend/           # React frontend code
+├── Inventory.sol       # Solidity smart contract
+├── server.js           # Node.js backend server
+├── .env                # Environment variables
+├── package.json        # Backend dependencies
+└── README.md           # This documentation
+```
