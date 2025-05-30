@@ -93,6 +93,7 @@ The smart contract (`Inventory.sol`) manages product data on Optimism Sepolia, u
 - **File**: `Inventory.sol`.
 - **Snippet**:
   ```solidity
+  //snippet
   function registerProduct(
       string memory id, string memory name, string memory sku, string memory batchNo,
       string memory expiryDate, string memory origin, string memory location, string memory uid,
@@ -106,6 +107,8 @@ The smart contract (`Inventory.sol`) manages product data on Optimism Sepolia, u
       emit ProductRegistered(id, name, sku, batchNo, expiryDate, origin, location, uid,
                              category, quantityInStock, status, icon);
   }
+
+  //Other codes
   ```
 #### Deployment Steps
 1. **Open Remix IDE**:
@@ -173,6 +176,8 @@ The Node.js server processes NFC scan requests, interacts with the smart contrac
           res.status(500).json({ success: false, error: error.message });
       }
   });
+
+  //Other codes
   ```
 
 #### Prerequisites
@@ -283,6 +288,8 @@ ALCHEMY_URL=alchemy_api_url
       resolver: zodResolver(logSaleSchema),
       defaultValues: { saleDate: "", price: 0 },
     });
+
+  //Other codes
   ```
   
 - **Prerequisites**:
@@ -329,7 +336,7 @@ NFC Tools writes URLs to NTAG215 tags, which trigger server actions when scanned
    - Alternatively, use a pre-built binary for your OS.
 2. Run Ngrok:
    ```bash
-   ngrok http 3000
+   ngrok http 3001
    ```
 3. Copy the public URL (e.g., `https://5664-41-215-171-145.ngrok-free.app`).
 
