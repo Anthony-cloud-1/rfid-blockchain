@@ -212,7 +212,7 @@ ALCHEMY_URL=alchemy_api_url
    .env
    node_modules/
    ```
-3. Update `server.js` with your contract address if different from `0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxC524`.
+3. Update `server.js` with your contract address. Eg; `0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxC524`.
 
 #### Run the Server
 1. Start the server:
@@ -230,7 +230,7 @@ ALCHEMY_URL=alchemy_api_url
    - **Register**: `http://localhost:3000/register?tagid=TAG001&text=PID003|Batch003|Exp2027|Kenya`
    - **Update Location**: `http://localhost:3000/updateLocation?tagid=TAG001&text=PID003|Accra|1000|arrived`
    - **Log Sale**: `http://localhost:3000/logSale?tagid=TAG001&text=PID003|2025-05-24|1500`
-   -**Check Product**: `http://localhost:3000/checkProduct?tagid=TAG001&text=PID003`
+   - **Check Product**: `http://localhost:3000/checkProduct?tagid=TAG001&text=PID003`
 
 ---
 
@@ -347,7 +347,7 @@ NFC Tools writes URLs to NTAG215 tags, which trigger server actions when scanned
    - **Enrollment**: `https://5664-41-215-171-145.ngrok-free.app/register?tagid=TAG001&text=PID003|Batch003|Exp2027|Kenya`
    - **Logistics**: `https://5664-41-215-171-145.ngrok-free.app/updateLocation?tagid=TAG001&text=PID003|Accra|1000|arrived`
    - **Retail**: `https://5664-41-215-171-145.ngrok-free.app/logSale?tagid=TAG001&text=PID003|2025-05-24|1500`
-   -**Verification**: `https://5664-41-215-171-145.ngrok-free.app/checkProduct?tagid=TAG001&text=PID003`
+   - **Verification**: `https://5664-41-215-171-145.ngrok-free.app/checkProduct?tagid=TAG001&text=PID003`
 4. Write the URL to an NTAG215 tag.
 5. Scan to verify the URL opens correctly.
 
