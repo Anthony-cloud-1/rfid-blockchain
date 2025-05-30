@@ -1,0 +1,7 @@
+1- Extract the archive in a folder, and call it whatever you want.
+2- Open your VS Code
+3- Open the folder to access to all the files in the project.
+4- Open up your terminal, and make sure you are pointing to the path of the project's folder
+5- then, type npm install, to install all the librairies
+6- after the installation, type in npm run dev to start the project
+
