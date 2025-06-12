@@ -38,7 +38,7 @@ MetaMask is used to manage your Ethereum account and sign transactions on Optimi
    - Open MetaMask, click the network dropdown (e.g., "Ethereum Mainnet"), and select "Add Network".
    - Add a custom network with these details:
      ```
-     Network Name: Optimism Sepolia
+     Network Name: OP Sepolia Testnet
      RPC URL: https://sepolia.optimism.io
      Chain ID: 11155420
      Currency Symbol: ETH
