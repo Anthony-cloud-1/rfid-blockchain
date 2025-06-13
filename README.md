@@ -42,7 +42,7 @@ MetaMask is used to manage your Ethereum account and sign transactions on Optimi
      RPC URL: https://sepolia.optimism.io
      Chain ID: 11155420
      Currency Symbol: ETH
-     Block Explorer URL: [https://optimism-sepolia.blockscout.com](https://optimism-sepolia.blockscout.com/)
+     Block Explorer URL: https://optimism-sepolia.blockscout.com
      ```
    - Save the network.
 
