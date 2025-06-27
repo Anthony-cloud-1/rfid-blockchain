@@ -14,6 +14,54 @@ app.use((req, res, next) => {
     next();
 });
 
+// Helper function to generate HTML response
+const generateHtmlResponse = (title, message, isSuccess = true, product = null, transactionHash = null) => {
+    const statusColor = isSuccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    const productDetails = product ? `
+        <div class="mt-4">
+            <h2 class="text-lg font-semibold">Product Details</h2>
+            <table class="w-full text-left border-collapse">
+                <tr class="border-b"><th class="py-2">ID</th><td class="py-2">${product.id}</td></tr>
+                <tr class="border-b"><th class="py-2">Name</th><td class="py-2">${product.name}</td></tr>
+                <tr class="border-b"><th class="py-2">SKU</th><td class="py-2">${product.sku}</td></tr>
+                <tr class="border-b"><th class="py-2">Batch No</th><td class="py-2">${product.batchNo}</td></tr>
+                <tr class="border-b"><th class="py-2">Expiry Date</th><td class="py-2">${product.expiryDate}</td></tr>
+                <tr class="border-b"><th class="py-2">Origin</th><td class="py-2">${product.origin}</td></tr>
+                <tr class="border-b"><th class="py-2">Location</th><td class="py-2">${product.location}</td></tr>
+                <tr class="border-b"><th class="py-2">Status</th><td class="py-2">${product.status}</td></tr>
+                <tr class="border-b"><th class="py-2">Sold</th><td class="py-2">${product.sold ? 'Yes' : 'No'}</td></tr>
+                <tr class="border-b"><th class="py-2">Sale Date</th><td class="py-2">${product.saleDate || 'N/A'}</td></tr>
+                <tr class="border-b"><th class="py-2">Price</th><td class="py-2">${product.price || 0}</td></tr>
+                <tr class="border-b"><th class="py-2">Category</th><td class="py-2">${product.category}</td></tr>
+                <tr class="border-b"><th class="py-2">Quantity</th><td class="py-2">${product.quantityInStock}</td></tr>
+                <tr class="border-b"><th class="py-2">UID</th><td class="py-2">${product.uid}</td></tr>
+                <tr><th class="py-2">Icon</th><td class="py-2">${product.icon}</td></tr>
+            </table>
+        </div>
+    ` : '';
+    const txInfo = transactionHash ? `<p class="mt-2"><strong>Transaction Hash:</strong> <a href="https://sepolia-optimism.blockscout.com/tx/${transactionHash}" target="_blank" class="text-blue-600 underline">${transactionHash}</a></p>` : '';
+    return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${title}</title>
+            <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        </head>
+        <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+            <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full ${statusColor}">
+                <h1 class="text-2xl font-bold mb-4">${title}</h1>
+                <p>${message}</p>
+                ${txInfo}
+                ${productDetails}
+                <a href="http://localhost:3000" class="mt-4 inline-block text-blue-600 underline">Back to Home</a>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
 // Custom retry function
 async function retry(fn, retries = 3, delay = 2000) {
     for (let i = 0; i < retries; i++) {
@@ -606,7 +654,7 @@ async function checkOwnership() {
         const owner = await contract.methods.owner().call();
         console.log('Contract Owner:', owner);
         if (owner.toLowerCase() !== account.address.toLowerCase()) {
-            console.warn('Warning: The account address does not match the contract owner. Registration will fail unless PRIVATE_KEY is set to the owner\'s private key.');
+            console.warn('Warning: The account address does not match the contract owner.');
         }
     } catch (error) {
         console.error('Error checking contract ownership:', error.message);
@@ -686,7 +734,7 @@ app.post('/register', async (req, res) => {
         const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
         productCache.delete('products');
-        productCache.delete(id); // Clear individual product cache
+        productCache.delete(id);
         res.status(200).json({ success: true, transactionHash: receipt.transactionHash });
     } catch (error) {
         console.error('Error registering product (UI):', error.message);
@@ -697,18 +745,30 @@ app.post('/register', async (req, res) => {
 // GET /register - NFC-based product registration
 app.get('/register', async (req, res) => {
     const tagId = req.query.tagid || 'none';
-    const text = req.query.text; // e.g., "PID003|ProductX|Batch003|Exp2027|Kenya|Electronics|10"
+    const text = req.query.text;
     if (!text) {
-        return res.status(400).json({ success: false, error: 'No text data found' });
+        return res.status(400).send(generateHtmlResponse(
+            'Registration Failed',
+            'No text data found. Please ensure the NFC tag contains valid data.',
+            false
+        ));
     }
     const parts = text.split('|');
     if (parts.length < 5) {
-        return res.status(400).json({ success: false, error: 'Invalid text format; expected ID|Name|BN|ExpDate|Origin' });
+        return res.status(400).send(generateHtmlResponse(
+            'Registration Failed',
+            'Invalid text format. Expected: ID|Name|BN|ExpDate|Origin[|Category|Quantity]',
+            false
+        ));
     }
     const [productId, name, batchNo, expiryDate, origin, category = 'Others', quantity = '1'] = parts;
     const quantityInStock = parseInt(quantity, 10);
     if (isNaN(quantityInStock) || quantityInStock < 0) {
-        return res.status(400).json({ success: false, error: 'Invalid quantity; must be a non-negative integer' });
+        return res.status(400).send(generateHtmlResponse(
+            'Registration Failed',
+            'Invalid quantity. Must be a non-negative integer.',
+            false
+        ));
     }
     console.log('NFC Register Input:', { productId, name, batchNo, expiryDate, origin, category, quantityInStock, tagId });
 
@@ -739,15 +799,27 @@ app.get('/register', async (req, res) => {
         const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
         productCache.delete('products');
-        productCache.delete(productId); // Clear individual product cache
-        res.status(200).json({
-            success: true,
-            message: `Product ${productId} registered via NFC`,
-            transactionHash: receipt.transactionHash
-        });
+        productCache.delete(productId);
+
+        const product = {
+            id: productId, name, sku, batchNo, expiryDate, origin, location,
+            sold: false, saleDate: '', uid, price: 0, category, quantityInStock,
+            status: 'en route', icon
+        };
+        return res.status(200).send(generateHtmlResponse(
+            'Product Registered',
+            `Product ${productId} (${name}) successfully registered via NFC.`,
+            true,
+            product,
+            receipt.transactionHash
+        ));
     } catch (error) {
         console.error('Error registering NFC product:', error.message);
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).send(generateHtmlResponse(
+            'Registration Failed',
+            `Error registering product: ${error.message}`,
+            false
+        ));
     }
 });
 
@@ -788,18 +860,30 @@ app.post('/updateLocation', async (req, res) => {
 // GET /updateLocation - NFC-based location updates
 app.get('/updateLocation', async (req, res) => {
     const tagId = req.query.tagid || 'none';
-    const text = req.query.text; // e.g., "PID004|Nairobi|1000|arrived"
+    const text = req.query.text;
     if (!text) {
-        return res.status(400).json({ success: false, error: 'No text data found' });
+        return res.status(400).send(generateHtmlResponse(
+            'Update Failed',
+            'No text data found. Please ensure the NFC tag contains valid data.',
+            false
+        ));
     }
     const parts = text.split('|');
     if (parts.length < 3) {
-        return res.status(400).json({ success: false, error: 'Invalid text format; expected ID|Location|Price|Status' });
+        return res.status(400).send(generateHtmlResponse(
+            'Update Failed',
+            'Invalid text format. Expected: ID|Location|Price|Status',
+            false
+        ));
     }
     const [productId, location, priceStr, status = 'arrived'] = parts;
     const price = parseInt(priceStr, 10);
     if (isNaN(price) || price < 0) {
-        return res.status(400).json({ success: false, error: 'Invalid price; must be a non-negative integer' });
+        return res.status(400).send(generateHtmlResponse(
+            'Update Failed',
+            'Invalid price. Must be a non-negative integer.',
+            false
+        ));
     }
     console.log('NFC Update Location Input:', { productId, location, price, status, tagId });
 
@@ -824,14 +908,39 @@ app.get('/updateLocation', async (req, res) => {
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
         productCache.delete(productId);
         productCache.delete('products');
-        res.status(200).json({
-            success: true,
-            message: `Location updated for product ${productId} via NFC`,
-            transactionHash: receipt.transactionHash
-        });
+
+        const productData = await contract.methods.getProduct(productId).call();
+        const product = {
+            id: productData[0],
+            name: productData[1],
+            sku: productData[2],
+            batchNo: productData[3],
+            expiryDate: productData[4],
+            origin: productData[5],
+            location: productData[6],
+            sold: productData[7],
+            saleDate: productData[8],
+            uid: productData[9],
+            price: parseInt(productData[10], 10),
+            category: productData[11],
+            quantityInStock: parseInt(productData[12], 10),
+            status: mapEnumToStatus(parseInt(productData[13], 10)),
+            icon: productData[14]
+        };
+        return res.status(200).send(generateHtmlResponse(
+            'Location Updated',
+            `Location updated for product ${productId} to ${location} with status ${status}.`,
+            true,
+            product,
+            receipt.transactionHash
+        ));
     } catch (error) {
         console.error('Error updating location (NFC):', error.message);
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).send(generateHtmlResponse(
+            'Update Failed',
+            `Error updating location: ${error.message}`,
+            false
+        ));
     }
 });
 
@@ -867,18 +976,30 @@ app.post('/logSale', async (req, res) => {
 // GET /logSale - NFC-based sale
 app.get('/logSale', async (req, res) => {
     const tagId = req.query.tagid || 'none';
-    const text = req.query.text; // e.g., "PID004|2025-10-15|1000"
+    const text = req.query.text;
     if (!text) {
-        return res.status(400).json({ success: false, error: 'Missing text data' });
+        return res.status(400).send(generateHtmlResponse(
+            'Sale Failed',
+            'Missing text data. Please ensure the NFC tag contains valid data.',
+            false
+        ));
     }
     const parts = text.split('|');
     if (parts.length < 3) {
-        return res.status(400).json({ success: false, error: 'Invalid text format; expected ID|SaleDate|Price' });
+        return res.status(400).send(generateHtmlResponse(
+            'Sale Failed',
+            'Invalid text format. Expected: ID|SaleDate|Price',
+            false
+        ));
     }
     const [productId, saleDate, priceStr] = parts;
     const price = parseInt(priceStr, 10);
     if (isNaN(price) || price < 0) {
-        return res.status(400).json({ success: false, error: 'Invalid price; must be a non-negative integer' });
+        return res.status(400).send(generateHtmlResponse(
+            'Sale Failed',
+            'Invalid price. Must be a non-negative integer.',
+            false
+        ));
     }
     console.log('NFC Log Sale Input:', { productId, saleDate, price, tagId });
 
@@ -898,14 +1019,39 @@ app.get('/logSale', async (req, res) => {
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
         productCache.delete(productId);
         productCache.delete('products');
-        res.status(200).json({
-            success: true,
-            message: `Sale logged for product ${productId} via NFC`,
-            transactionHash: receipt.transactionHash
-        });
+
+        const productData = await contract.methods.getProduct(productId).call();
+        const product = {
+            id: productData[0],
+            name: productData[1],
+            sku: productData[2],
+            batchNo: productData[3],
+            expiryDate: productData[4],
+            origin: productData[5],
+            location: productData[6],
+            sold: productData[7],
+            saleDate: productData[8],
+            uid: productData[9],
+            price: parseInt(productData[10], 10),
+            category: productData[11],
+            quantityInStock: parseInt(productData[12], 10),
+            status: mapEnumToStatus(parseInt(productData[13], 10)),
+            icon: productData[14]
+        };
+        return res.status(200).send(generateHtmlResponse(
+            'Sale Logged',
+            `Sale logged for product ${productId} on ${saleDate} for ${price} units.`,
+            true,
+            product,
+            receipt.transactionHash
+        ));
     } catch (error) {
         console.error('Error logging sale (NFC):', error.message);
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).send(generateHtmlResponse(
+            'Sale Failed',
+            `Error logging sale: ${error.message}`,
+            false
+        ));
     }
 });
 
@@ -1056,11 +1202,19 @@ app.get('/checkProduct', async (req, res) => {
     const tagId = req.query.tagid || 'none';
     const text = req.query.text;
     if (!text) {
-        return res.status(400).json({ success: false, error: 'Missing text parameter' });
+        return res.status(400).send(generateHtmlResponse(
+            'Check Failed',
+            'Missing text parameter. Please ensure the NFC tag contains a valid product ID.',
+            false
+        ));
     }
     const productId = text.trim();
     if (!productId) {
-        return res.status(400).json({ success: false, error: 'Invalid productId in text' });
+        return res.status(400).send(generateHtmlResponse(
+            'Check Failed',
+            'Invalid product ID in text.',
+            false
+        ));
     }
     console.log('Checking product:', productId, ' with tagId ', tagId, ' at', new Date().toISOString());
 
@@ -1097,10 +1251,11 @@ app.get('/checkProduct', async (req, res) => {
 
         if (!formattedProduct.id) {
             console.log(`Product ${productId} has invalid data:`, formattedProduct);
-            return res.status(200).json({
-                success: false,
-                message: `Product ${productId} is not registered or has been deleted.`,
-            });
+            return res.status(200).send(generateHtmlResponse(
+                'Check Failed',
+                `Product ${productId} is not registered or has been deleted.`,
+                false
+            ));
         }
 
         let statusMessage;
@@ -1118,21 +1273,26 @@ app.get('/checkProduct', async (req, res) => {
                 statusMessage = `Product ${productId} (${formattedProduct.name}) has an unknown status.`;
         }
 
-        res.status(200).json({
-            success: true,
-            message: statusMessage,
-            product: formattedProduct
-        });
+        return res.status(200).send(generateHtmlResponse(
+            'Product Status',
+            statusMessage,
+            true,
+            formattedProduct
+        ));
     } catch (error) {
         console.error('Error checking product:', error.message);
         if (error.message.includes('Product does not exist')) {
-            res.status(200).json({
-                success: false,
-                message: `Product ${productId} is not registered or has been deleted.`,
-            });
-        } else {
-            res.status(500).json({ success: false, error: error.message });
+            return res.status(200).send(generateHtmlResponse(
+                'Check Failed',
+                `Product ${productId} is not registered or has been deleted.`,
+                false
+            ));
         }
+        return res.status(500).send(generateHtmlResponse(
+            'Check Failed',
+            `Error checking product: ${error.message}`,
+            false
+        ));
     }
 });
 
