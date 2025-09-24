@@ -79,10 +79,10 @@ async function retry(fn, retries = 3, delay = 2000) {
 }
 
 // Connect to Optimism Sepolia via Alchemy
-const web3 = new Web3('https://opt-sepolia.g.alchemy.com/v2/6kMA49rbFQ8cf6yJLwvFD27vKiEhkquS');
+const web3 = new Web3('https://opt-sepolia.g.alchemy.com/v2/your-unique-api-key');
 
 // Contract details
-const contractAddress = '0xd2eEA2F7F4952C198869532A4aaBD936aD1621B8';
+const contractAddress = 'your-contract-address';
 const contractABI = [
     {
         "inputs": [],
@@ -631,7 +631,7 @@ const contractABI = [
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 // Private key from .env
-const privateKey = process.env.PRIVATE_KEY || '3c74bac221561eed48820f4fe377a186d0e8c04104d7a0b148c2f905155a6b30';
+const privateKey = process.env.PRIVATE_KEY || 'your-wallet-private-key';
 if (!privateKey) {
     console.error('Error: PRIVATE_KEY not set in .env file');
     process.exit(1);
@@ -1299,3 +1299,4 @@ app.get('/checkProduct', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
+
